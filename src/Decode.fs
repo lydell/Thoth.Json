@@ -10,6 +10,9 @@ module Decode =
     open Fable.Core.JsInterop
 
     module Helpers =
+        [<Emit("Array.from($0)")>]
+        let private arrayFrom(x: JsonValue seq): JsonValue = jsNative
+
         [<Emit("typeof $0")>]
         let jsTypeof (_ : JsonValue) : string = jsNative
 
@@ -88,8 +91,8 @@ module Decode =
                 "Expecting " + msg + ".\n" + (Helpers.anyToString value)
             | BadOneOf messages ->
                 "The following errors were found:\n\n" + String.concat "\n\n" messages
-            | FailMessage msg ->
-                "The following `failure` occurred with the decoder: " + msg
+            | FailMessage (msg, value) ->
+                "The following `failure` occurred with the decoder: " + msg + "\n" + (Helpers.anyToString value)
 
         match error with
         | BadOneOf _ ->
@@ -542,8 +545,8 @@ module Decode =
             Ok output
 
     let fail (msg: string) : Decoder<'a> =
-        fun path _ ->
-            (path, FailMessage msg) |> Error
+        fun path token ->
+            (path, FailMessage(msg, token)) |> Error
 
     let andThen (cb: 'a -> Decoder<'b>) (decoder : Decoder<'a>) : Decoder<'b> =
         fun path value ->
@@ -1038,8 +1041,7 @@ module Decode =
 
     let private mixedArray msg (decoders: BoxedDecoder[]) (path: string) (values: JsonValue[]): Result<JsonValue list, DecoderError> =
         if decoders.Length <> values.Length then
-            (path, sprintf "Expected %i %s but got %i" decoders.Length msg values.Length
-            |> FailMessage) |> Error
+            (path, FailMessage(sprintf "Expected %i %s but got %i" decoders.Length msg values.Length, arrayFrom values)) |> Error
         else
             (values, decoders, Ok [])
             |||> Array.foldBack2 (fun value decoder acc ->
@@ -1052,7 +1054,7 @@ module Decode =
             FSharpType.GetUnionCases(t, allowAccessToPrivateRepresentation=true)
             |> Array.tryFind (fun x -> x.Name = name)
         match uci with
-        | None -> (path, FailMessage("Cannot find case " + name + " in " + t.FullName)) |> Error
+        | None -> (path, FailMessage("Cannot find case " + name + " in " + t.FullName, arrayFrom values)) |> Error
         | Some uci ->
             if values.Length = 0 then
                 FSharpValue.MakeUnion(uci, [||], allowAccessToPrivateRepresentation=true) |> Ok

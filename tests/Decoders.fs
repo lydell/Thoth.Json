@@ -1446,10 +1446,15 @@ Expecting an object with a field named `height` but instead got:
                 equal expected actual
 
             testCase "fail works" <| fun _ ->
-                let msg = "Failing because it's fun"
-                let expected = Error("Error at: `$`\nThe following `failure` occurred with the decoder: " + msg)
+                let expected =
+                    Error(
+                        """
+Error at: `$`
+The following `failure` occurred with the decoder: Failing because it's fun
+true
+                        """.Trim())
                 let actual =
-                    Decode.fromString (Decode.fail msg) "true"
+                    Decode.fromString (Decode.fail "Failing because it's fun") "true"
 
                 equal expected actual
 
@@ -2128,7 +2133,16 @@ Expecting a string but instead got: 12
                         json
 
                 let expected =
-                    Error "Error at: `$`\nThe following `failure` occurred with the decoder: Unknown shape type custom_shape"
+                    Error(
+                        """
+Error at: `$`
+The following `failure` occurred with the decoder: Unknown shape type custom_shape
+{
+    "enabled": true,
+    "shape": "custom_shape",
+    "radius": 20
+}
+                        """.Trim())
 
                 equal expected actual
 
@@ -2262,7 +2276,15 @@ Expecting an object with a field named `radius` but instead got:
                         json
 
                 let expected =
-                    Error "Error at: `$`\nThe following `failure` occurred with the decoder: Unknown shape type invalid_shape"
+                    Error(
+                        """
+Error at: `$`
+The following `failure` occurred with the decoder: Unknown shape type invalid_shape
+{
+    "enabled": true,
+    "shape": "invalid_shape"
+}
+                        """.Trim())
 
                 equal expected actual
 
